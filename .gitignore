@@ -1,0 +1,18 @@
+# Backend
+backend/node_modules/
+backend/.env
+
+# Flutter
+cookbook_app/build/
+cookbook_app/.dart_tool/
+cookbook_app/.flutter-plugin-dependencies
+cookbook_app/android/.gradle/
+cookbook_app/ios/Pods/
+
+# Editor
+.idea/
+.vscode/
+
+# General
+.DS_Store
+*.log
