@@ -37,4 +37,14 @@ const toggleLike = async (req, res) => {
   }
 };
 
-module.exports = { toggleLike };
+const getLikeStatus = async (req, res) => {
+  try {
+    const { recipeId } = req.params;
+    const existingLike = await Like.findOne({ recipe: recipeId, user: req.user._id });
+    res.status(200).json({ liked: !!existingLike });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+module.exports = { toggleLike, getLikeStatus };

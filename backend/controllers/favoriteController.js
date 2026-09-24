@@ -39,11 +39,23 @@ const getFavorites = async (req, res) => {
       })
       .sort({ createdAt: -1 });
 
-    res.status(200).json(favorites);
+    const validFavorites = favorites.filter(fav => fav.recipe !== null);   // ← add this line
+
+    res.status(200).json(validFavorites);   // ← changed from `favorites`
 
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
 
-module.exports = { toggleFavorite, getFavorites };
+const getFavoriteStatus = async (req, res) => {
+  try {
+    const { recipeId } = req.params;
+    const existingFavorite = await Favorite.findOne({ recipe: recipeId, user: req.user._id });
+    res.status(200).json({ favorited: !!existingFavorite });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+module.exports = { toggleFavorite, getFavorites, getFavoriteStatus };

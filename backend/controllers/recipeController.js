@@ -1,4 +1,7 @@
 const Recipe = require('../models/Recipe');
+const Like = require('../models/Like');
+const Favorite = require('../models/Favorite');
+const Comment = require('../models/Comment');
 
 // @desc  Create a new recipe
 // @route POST /api/recipes
@@ -21,6 +24,8 @@ const createRecipe = async (req, res) => {
       createdBy: req.user._id   // ← comes from auth middleware, not the request body
     });
 
+    const populatedRecipe = await recipe.populate('createdBy', 'name');
+
     res.status(201).json(recipe);
 
   } catch (error) {
@@ -37,7 +42,8 @@ const getRecipes = async (req, res) => {
 
     if (search) {
       query.title = { $regex: search, $options: 'i' };
-    } else if (category) {
+    }
+    if (category) {
       query.category = category;
     }
 
@@ -90,7 +96,7 @@ const updateRecipe = async (req, res) => {
       req.params.id,
       req.body,
       { new: true, runValidators: true }
-    );
+    ).populate('createdBy', 'name');   // ← add this
 
     res.status(200).json(updatedRecipe);
 
@@ -113,7 +119,12 @@ const deleteRecipe = async (req, res) => {
       return res.status(403).json({ message: 'Not authorized to delete this recipe' });
     }
 
-    await recipe.deleteOne();
+    await Promise.all([
+      recipe.deleteOne(),
+      Like.deleteMany({ recipe: req.params.id }),
+      Favorite.deleteMany({ recipe: req.params.id }),
+      Comment.deleteMany({ recipe: req.params.id }),
+    ]);
 
     res.status(200).json({ message: 'Recipe deleted successfully' });
 
@@ -122,4 +133,16 @@ const deleteRecipe = async (req, res) => {
   }
 };
 
-module.exports = { createRecipe, getRecipes, getRecipeById, updateRecipe, deleteRecipe };
+const getMyRecipes = async (req, res) => {
+  try {
+    const recipes = await Recipe.find({ createdBy: req.user._id })
+      .populate('createdBy', 'name')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(recipes);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+module.exports = { createRecipe, getRecipes, getRecipeById, updateRecipe, deleteRecipe, getMyRecipes };

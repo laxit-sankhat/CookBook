@@ -23,6 +23,9 @@ const addComment = async (req, res) => {
       user: req.user._id
     });
 
+    recipe.commentsCount += 1;
+    await recipe.save();
+
     // send back comment with commenter's name attached
     const populatedComment = await comment.populate('user', 'name');
 
@@ -63,6 +66,12 @@ const deleteComment = async (req, res) => {
     }
 
     await comment.deleteOne();
+
+    const recipe = await Recipe.findById(comment.recipe);   // ← add this
+    if (recipe) {
+      recipe.commentsCount = Math.max(0, recipe.commentsCount - 1);
+      await recipe.save();
+    }
 
     res.status(200).json({ message: 'Comment deleted successfully' });
 
