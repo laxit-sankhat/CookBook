@@ -2,6 +2,9 @@ const Recipe = require('../models/Recipe');
 const Like = require('../models/Like');
 const Favorite = require('../models/Favorite');
 const Comment = require('../models/Comment');
+const { buildRecipePrompt } = require('../utils/aiPromptBuilder');
+const { fetchRecipeSuggestions } = require('../services/aiService');
+const { parseAndValidateAIResponse } = require('../utils/aiResponseParser');
 
 // @desc  Create a new recipe
 // @route POST /api/recipes
@@ -145,4 +148,44 @@ const getMyRecipes = async (req, res) => {
   }
 };
 
-module.exports = { createRecipe, getRecipes, getRecipeById, updateRecipe, deleteRecipe, getMyRecipes };
+const getRecipeSuggestions = async (req, res) => {
+  try {
+    const { ingredients, instructions, dietaryPreferences, maxTime } = req.body;
+
+    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
+      return res.status(400).json({ message: 'Please provide an array of ingredients.' });
+    }
+
+    // 1. Build the prompt
+    const prompt = buildRecipePrompt({
+      ingredients,
+      instructions: instructions ? String(instructions).substring(0, 300) : '',
+      dietaryPreferences: dietaryPreferences ? String(dietaryPreferences).substring(0, 100) : '',
+      maxTime: maxTime ? Number(maxTime) : null
+    });
+
+    // 2. Fetch raw response from AI Service
+    const rawAiResponse = await fetchRecipeSuggestions(prompt);
+
+    // 3. Parse and validate AI Response
+    const applicationDto = parseAndValidateAIResponse(rawAiResponse);
+
+    // 4. Send structured DTO to frontend
+    res.status(200).json(applicationDto);
+
+  } catch (error) {
+    console.error('Error generating suggestions:', error.message);
+    
+    if (error.message === 'AI_PROVIDER_ERROR') {
+      return res.status(503).json({ message: 'Our recipe AI is currently busy. Please try again in a moment.' });
+    }
+    
+    if (error.message === 'AI_PARSE_ERROR' || error.message === 'AI_INVALID_STRUCTURE' || error.message === 'AI_NO_VALID_RECIPES') {
+      return res.status(422).json({ message: "We couldn't generate a valid recipe from those ingredients. Try adding more details." });
+    }
+
+    res.status(500).json({ message: 'An unexpected error occurred while generating suggestions.' });
+  }
+};
+
+module.exports = { createRecipe, getRecipes, getRecipeById, updateRecipe, deleteRecipe, getMyRecipes, getRecipeSuggestions };

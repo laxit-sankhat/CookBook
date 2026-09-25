@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/recipe_model.dart';
+import '../models/ai_suggestion_model.dart';
 import '../utils/constants.dart';
 
 class RecipeService {
@@ -119,6 +120,38 @@ class RecipeService {
       return RecipeModel.fromJson(data);
     } else {
       throw Exception(data['message'] ?? 'Failed to create recipe');
+    }
+  }
+
+  Future<List<AiSuggestionModel>> getRecipeSuggestions({
+    required String token,
+    required List<String> ingredients,
+    String? instructions,
+    String? dietaryPreferences,
+    int? maxTime,
+  }) async {
+    final response = await http.post(
+      Uri.parse('${ApiConstants.baseUrl}/recipes/suggestions'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: jsonEncode({
+        'ingredients': ingredients,
+        if (instructions != null) 'instructions': instructions,
+        if (dietaryPreferences != null) 'dietaryPreferences': dietaryPreferences,
+        if (maxTime != null) 'maxTime': maxTime,
+      }),
+    );
+
+    final data = jsonDecode(response.body);
+
+    if (response.statusCode == 200) {
+      return (data['recipes'] as List)
+          .map((item) => AiSuggestionModel.fromJson(item))
+          .toList();
+    } else {
+      throw Exception(data['message'] ?? 'Failed to generate suggestions');
     }
   }
 }
