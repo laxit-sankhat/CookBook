@@ -7,6 +7,7 @@ import '../models/recipe_model.dart';
 import '../providers/auth_provider.dart';
 import '../providers/recipe_provider.dart';
 import '../services/upload_service.dart';
+import '../utils/ingredient_matcher.dart';
 import 'package:http_parser/http_parser.dart';
 
 class AddRecipeScreen extends StatefulWidget {
@@ -34,7 +35,6 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
 
   final List<String> _categories = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snacks'];
   final List<String> _difficulties = ['Easy', 'Medium', 'Hard'];
-
   bool get _isEditMode => widget.existingRecipe != null;
 
   @override
@@ -61,6 +61,29 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   Future<void> _pickImage() async {
     final picked = await ImagePicker().pickImage(source: ImageSource.gallery, imageQuality: 80);
     if (picked != null) setState(() => _selectedImage = File(picked.path));
+  }
+
+  List<String> get _ingredientSuggestions {
+    final currentLine = _ingredientsController.text.split('\n').last;
+    final match = RegExp(r'(\S+)$').firstMatch(currentLine);
+    if (match == null) return const [];
+
+    return findIngredientSuggestions(match.group(1)!);
+  }
+
+  void _selectIngredientSuggestion(String suggestion) {
+    final lines = _ingredientsController.text.split('\n');
+    final currentLine = lines.removeLast();
+    final match = RegExp(r'(\S+)$').firstMatch(currentLine);
+    if (match == null) return;
+
+    lines.add('${currentLine.substring(0, match.start)}$suggestion');
+    final text = lines.join('\n');
+    _ingredientsController.value = TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+    setState(() {});
   }
 
   Future<void> _handleSubmit() async {
@@ -169,7 +192,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: 'Recipe Name', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.isEmpty) ? 'Please enter a recipe name' : null,
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter a recipe name' : null,
               ),
               const SizedBox(height: 16),
 
@@ -184,18 +207,39 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
               TextFormField(
                 controller: _ingredientsController,
                 maxLines: 4,
+                onChanged: (_) => setState(() {}),
                 decoration: const InputDecoration(
-                  labelText: 'Ingredients', hintText: 'One ingredient per line', border: OutlineInputBorder(),
+                  labelText: 'Ingredients',
+                  hintText: 'One ingredient per line',
+                  helperText: 'Choose an optional suggestion or enter any ingredient.',
+                  border: OutlineInputBorder(),
                 ),
-                validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter at least one ingredient' : null,
+                validator: (v) {
+                  final ingredients = (v ?? '').split('\n').map((item) => item.trim()).where((item) => item.isNotEmpty);
+                  if (ingredients.isEmpty) return 'Please enter at least one ingredient';
+                  return null;
+                },
               ),
+              if (_ingredientSuggestions.isNotEmpty)
+                Card(
+                  margin: const EdgeInsets.only(top: 4),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: _ingredientSuggestions.map((suggestion) => ListTile(
+                      dense: true,
+                      leading: const Icon(Icons.restaurant, size: 18),
+                      title: Text(suggestion),
+                      onTap: () => _selectIngredientSuggestion(suggestion),
+                    )).toList(),
+                  ),
+                ),
               const SizedBox(height: 16),
 
               TextFormField(
                 controller: _instructionsController,
                 maxLines: 5,
                 decoration: const InputDecoration(labelText: 'Instructions', border: OutlineInputBorder()),
-                validator: (v) => (v == null || v.isEmpty) ? 'Please enter instructions' : null,
+                validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter instructions' : null,
               ),
               const SizedBox(height: 16),
 
@@ -204,8 +248,8 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(labelText: 'Cooking Time (minutes)', border: OutlineInputBorder()),
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'Please enter cooking time';
-                  final n = int.tryParse(v);
+                  if (v == null || v.trim().isEmpty) return 'Please enter cooking time';
+                  final n = int.tryParse(v.trim());
                   if (n == null) return 'Enter a valid number';
                   if (n < 1 || n > 300) return 'Must be between 1 and 300 minutes';
                   return null;

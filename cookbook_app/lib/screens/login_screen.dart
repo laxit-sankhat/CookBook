@@ -61,8 +61,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   controller: _emailController,
                   decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter your email';
-                    if (!value.contains('@')) return 'Please enter a valid email';
+                    final email = value?.trim() ?? '';
+                    if (email.isEmpty) return 'Please enter your email';
+                    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+                      return 'Please enter a valid email';
+                    }
                     return null;
                   },
                 ),
@@ -73,7 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   obscureText: true,
                   decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter your password';
+                    if (value == null || value.trim().isEmpty) return 'Please enter your password';
                     if (value.length < 6) return 'Password must be at least 6 characters';
                     return null;
                   },

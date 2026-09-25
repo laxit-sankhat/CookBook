@@ -5,7 +5,7 @@ class ApiConstants {
     if (kIsWeb) {
       return 'http://localhost:5000/api';
     } else {
-      return 'http://172.31.7.65:5000/api';
+      return 'http://10.27.249.28:5000/api';
     }
   }
 }
