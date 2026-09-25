@@ -60,7 +60,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _nameController,
                   decoration: const InputDecoration(labelText: 'Name', border: OutlineInputBorder()),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter your name';
+                    if (value == null || value.trim().isEmpty) return 'Please enter your name';
                     return null;
                   },
                 ),
@@ -70,8 +70,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   controller: _emailController,
                   decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter your email';
-                    if (!value.contains('@')) return 'Please enter a valid email';
+                    final email = value?.trim() ?? '';
+                    if (email.isEmpty) return 'Please enter your email';
+                    if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(email)) {
+                      return 'Please enter a valid email';
+                    }
                     return null;
                   },
                 ),
@@ -82,7 +85,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: true,
                   decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
                   validator: (value) {
-                    if (value == null || value.isEmpty) return 'Please enter a password';
+                    if (value == null || value.trim().isEmpty) return 'Please enter a password';
                     if (value.length < 6) return 'Password must be at least 6 characters';
                     return null;
                   },

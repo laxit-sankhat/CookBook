@@ -3,6 +3,7 @@ import 'home_feed_screen.dart';
 import 'add_recipe_screen.dart';
 import 'profile_screen.dart';
 import 'ai_suggestion_screen.dart';
+import 'discover_screen.dart';
 
 class MainNavScreen extends StatefulWidget {
   const MainNavScreen({super.key});
@@ -19,6 +20,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
       const HomeFeedScreen(),
       AddRecipeScreen(onSuccess: () => setState(() => _selectedIndex = 0)),
       const AiSuggestionScreen(),
+      const DiscoverScreen(),
       const ProfileScreen(),
     ];
   }
@@ -31,13 +33,16 @@ class _MainNavScreenState extends State<MainNavScreen> {
         children: _buildScreens(),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed, // Needed when >3 items
+        type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
+        selectedItemColor: Colors.deepOrange,
+        unselectedItemColor: Colors.grey,
         onTap: (index) => setState(() => _selectedIndex = index),
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: 'Add'),
           BottomNavigationBarItem(icon: Icon(Icons.auto_awesome), label: 'AI Magic'),
+          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Discover'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),

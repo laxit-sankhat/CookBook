@@ -6,15 +6,37 @@ const { buildRecipePrompt } = require('../utils/aiPromptBuilder');
 const { fetchRecipeSuggestions } = require('../services/aiService');
 const { parseAndValidateAIResponse } = require('../utils/aiResponseParser');
 
+const categories = ['Breakfast', 'Lunch', 'Dinner', 'Dessert', 'Snacks'];
+const difficulties = ['Easy', 'Medium', 'Hard'];
+
+const validateRecipeInput = (input, { partial = false } = {}) => {
+  const required = ['title', 'category', 'imageUrl', 'ingredients', 'instructions', 'cookingTime', 'difficulty'];
+  if (!partial && required.some((field) => input[field] === undefined || input[field] === null)) {
+    return 'Please fill all required fields';
+  }
+  if (input.title !== undefined && (typeof input.title !== 'string' || !input.title.trim())) return 'Recipe name is required';
+  if (input.category !== undefined && !categories.includes(input.category)) return 'Please select a valid category';
+  if (input.imageUrl !== undefined && (typeof input.imageUrl !== 'string' || !input.imageUrl.trim())) return 'Please provide a recipe image';
+  if (input.ingredients !== undefined && (!Array.isArray(input.ingredients) || input.ingredients.length === 0 ||
+      input.ingredients.some((item) => typeof item !== 'string' || !item.trim()))) {
+    return 'Please provide at least one valid ingredient';
+  }
+  if (input.instructions !== undefined && (typeof input.instructions !== 'string' || !input.instructions.trim())) return 'Please provide instructions';
+  if (input.cookingTime !== undefined && (!Number.isInteger(Number(input.cookingTime)) || Number(input.cookingTime) < 1 || Number(input.cookingTime) > 300)) {
+    return 'Cooking time must be a whole number between 1 and 300 minutes';
+  }
+  if (input.difficulty !== undefined && !difficulties.includes(input.difficulty)) return 'Please select a valid difficulty';
+  return null;
+};
+
 // @desc  Create a new recipe
 // @route POST /api/recipes
 const createRecipe = async (req, res) => {
   try {
     const { title, category, imageUrl, ingredients, instructions, cookingTime, difficulty } = req.body;
 
-    if (!title || !category || !imageUrl || !ingredients || !instructions || !cookingTime || !difficulty) {
-      return res.status(400).json({ message: 'Please fill all required fields' });
-    }
+    const validationError = validateRecipeInput(req.body);
+    if (validationError) return res.status(400).json({ message: validationError });
 
     const recipe = await Recipe.create({
       title,
@@ -84,6 +106,9 @@ const getRecipeById = async (req, res) => {
 // @route PUT /api/recipes/:id
 const updateRecipe = async (req, res) => {
   try {
+    const validationError = validateRecipeInput(req.body, { partial: true });
+    if (validationError) return res.status(400).json({ message: validationError });
+
     const recipe = await Recipe.findById(req.params.id);
 
     if (!recipe) {
@@ -104,6 +129,9 @@ const updateRecipe = async (req, res) => {
     res.status(200).json(updatedRecipe);
 
   } catch (error) {
+    if (error.name === 'ValidationError' || error.name === 'CastError') {
+      return res.status(400).json({ message: 'Recipe fields are invalid' });
+    }
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
